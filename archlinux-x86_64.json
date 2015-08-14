@@ -1,0 +1,53 @@
+{
+    "builders": [{
+        "type": "virtualbox-iso",
+        "guest_os_type": "ArchLinux_64",
+        "vm_name": "archlinux-x86_64",
+        "iso_url": "D:/vms/iso/archlinux-2015.08.01-dual.iso",
+        "iso_checksum": "e98320cd5f0c346fff4140af0b5ffadd59849168",
+        "iso_checksum_type": "sha1",
+        "guest_additions_mode": "disable",
+        "hard_drive_interface": "sata",
+        "disk_size": 20480,
+        "vboxmanage": [
+            ["modifyvm", "{{.Name}}", "--clipboard", "bidirectional"],
+            ["modifyvm", "{{.Name}}", "--draganddrop", "bidirectional"],
+            ["modifyvm", "{{.Name}}", "--memory", "2048"],
+            ["modifyvm", "{{.Name}}", "--cpus", "2"],
+            ["modifyvm", "{{.Name}}", "--cpuexecutioncap", "90"],
+            ["modifyvm", "{{.Name}}", "--vram", "64"],
+            ["modifyvm", "{{.Name}}", "--rtcuseutc", "on"],
+            ["modifyvm", "{{.Name}}", "--audio", "dsound"],
+            ["modifyvm", "{{.Name}}", "--nic1", "nat"],
+            ["modifyvm", "{{.Name}}", "--nictype1", "virtio"],
+            ["modifyvm", "{{.Name}}", "--usbehci", "on"],
+            ["sharedfolder", "add", "{{.Name}}", "--name", "partages", "--hostpath", "D:/vms/partages", "--automount"]
+        ],
+        "boot_wait" : "5s",
+        "boot_command" : [
+            "<enter><wait10><wait10>",
+            "passwd<enter>root<enter>root<enter><wait>",
+            "systemctl start sshd<enter>"
+        ],
+        "shutdown_command": "systemctl poweroff",
+        "ssh_username": "root",
+        "ssh_password": "root"
+    }],
+    "provisioners": [
+        {
+            "type": "file",
+            "source": "files",
+            "destination": "/packer"
+        },
+        {
+            "type": "shell",
+            "scripts": [
+                "scripts/install_base",
+                "scripts/configure_base",
+                "scripts/add_packages",
+                "scripts/customize",
+                "scripts/clean"
+            ]
+        }
+    ]
+}

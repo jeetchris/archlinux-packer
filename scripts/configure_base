@@ -1,0 +1,59 @@
+#!/bin/bash -eux
+
+echo '==> Generating the locales'
+sed -i /mnt/etc/locale.gen \
+    -e '/^#en_US/ s|^#||' \
+    -e '/^#fr_FR/ s|^#||' \
+    -e '/^#ja_JP/ s|^#||'
+arch-chroot /mnt locale-gen
+
+echo '==> Configuring the locale'
+cat <<'LOCALECONF' > /mnt/etc/locale.conf
+LANG="fr_FR.UTF-8"
+LC_COLLATE="C"
+LOCALECONF
+
+echo '==> Configuring the keyboard for tty'
+echo 'KEYMAP=fr-latin1' > /mnt/etc/vconsole.conf
+
+echo '==> Configuring the keyboard for Xorg'
+cat <<'XORGCONF' > /mnt/etc/xorg.conf
+## Keyboard layout
+# Model : pc104 or pc105?
+# Layout : fr
+# Variant : nil
+Section "InputClass"
+    Identifier "Keyboard Defaults"
+    MatchIsKeyboard "yes"
+    Option "XkbModel" "pc104"
+    Option "XkbLayout" "fr"
+    #Option "XkbVariant" ""
+EndSection
+XORGCONF
+
+echo '==> Configuring the timezone'
+arch-chroot /mnt ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+
+echo '==> Configuring the hardware clock'
+arch-chroot /mnt hwclock --systohc --utc
+
+echo '==> Enabling package compilation using two cores'
+arch-chroot /mnt sed -i 's|^#\(MAKEFLAGS="-j2"\)|\1|' /etc/makepkg.conf
+
+echo '==> Configuring the sound'
+arch-chroot /mnt amixer set Master 100 unmute
+arch-chroot /mnt amixer set PCM 100 unmute
+
+echo '==> Giving o+rx permissions to the /media folder for vbox shared folders access'
+install -m 755 -d /mnt/media
+
+echo '==> Enabling virtualbox additions'
+cat <<VBOXCONF >> /mnt/etc/modules-load.d/virtualbox.conf
+vboxguest
+vboxsf
+vboxvideo
+VBOXCONF
+arch-chroot /mnt systemctl enable vboxservice
+
+echo '==> Enabling networking'
+arch-chroot /mnt systemctl enable dhcpcd

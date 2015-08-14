@@ -1,0 +1,35 @@
+#!/bin/bash -eux
+
+echo '==> Partitioning'
+sgdisk /dev/sda -n 0:0:+32M -t 0:ef02 -c 0:"BIOS boot partition"
+sgdisk /dev/sda -n 0:0:0 -c 0:"Linux /"
+sgdisk /dev/sda -p
+
+echo '==> Creating the filesystem'
+mkfs.ext4 /dev/sda2
+
+echo '==> Mounting the new system root'
+mount /dev/sda2 /mnt
+
+echo '==> Setting the download mirrors'
+cat <<'MIRRORLIST' > /etc/pacman.d/mirrorlist
+## Japan
+Server = http://ftp.tsukuba.wide.ad.jp/Linux/archlinux/$repo/os/$arch
+Server = http://ftp.jaist.ac.jp/pub/Linux/ArchLinux/$repo/os/$arch
+MIRRORLIST
+
+echo '==> Bootstrapping the new system'
+pacstrap /mnt \
+    base base-devel grub \
+    virtualbox-guest-utils alsa-utils openssh\
+    bash-completion
+
+echo '==> Generating the filesystem table'
+genfstab -U -p /mnt >> /mnt/etc/fstab
+
+echo '==> Creating the ramdisk'
+arch-chroot /mnt mkinitcpio -p linux
+
+echo '==> Installing the bootloader'
+arch-chroot /mnt grub-install --no-floppy --recheck /dev/sda
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg

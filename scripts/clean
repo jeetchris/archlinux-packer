@@ -1,0 +1,9 @@
+#!/bin/bash -ux
+
+echo '==> Deleting pacman cache'
+arch-chroot /mnt paccache -rk0
+
+echo '==> Zeroing out the free space to save space in the final image'
+dd if=/dev/zero of=/mnt/ZERO bs=1M
+rm -f /mnt/ZERO
+sync

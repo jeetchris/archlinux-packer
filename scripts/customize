@@ -1,0 +1,100 @@
+#!/bin/bash -eux
+
+hostname=ordi
+user=chris
+
+echo '==> Configuring the hostname'
+echo "$hostname" > /mnt/etc/hostname
+
+echo '==> Setting a password for root'
+echo root:root | arch-chroot /mnt chpasswd
+
+echo "==> Installing root's home directory"
+cp -R /packer/root /mnt
+cp /packer/home/.vimrc /mnt/root
+find /mnt/root -type d -print0 | xargs -0 chmod 755
+find /mnt/root -type f -print0 | xargs -0 chmod 644
+chmod 750 /mnt/root
+arch-chroot /mnt chown -R root:root /root
+
+echo '==> Creating a new user'
+arch-chroot /mnt useradd -m -G users,vboxsf -s /bin/bash "$user"
+echo "$user":"$user" | arch-chroot /mnt chpasswd
+
+echo '==> Giving the user the sudo rights'
+install -m 0440 /dev/null /mnt/etc/sudoers.d/"$user"
+cat <<SUDOERS > /mnt/etc/sudoers.d/"$user"
+$user ALL=(ALL) ALL
+SUDOERS
+
+echo "==> Installing user's home directory"
+rm -rf /mnt/home/"$user"
+cp -R /packer/home /mnt/home/"$user"
+find /mnt/home/"$user" -type d -print0 | xargs -0 chmod 755
+find /mnt/home/"$user" -type f -print0 | xargs -0 chmod 644
+chmod 700 /mnt/home/"$user"
+chmod 755 /mnt/home/"$user"/.config/openbox/{autostart,environment}
+[[ -f /mnt/home/"$user"/.ssh/id_rsa ]] && chmod 600 /mnt/home/"$user"/.ssh/id_rsa
+[[ -f /mnt/home/"$user"/.ssh/id_rsa.pub ]] && chmod 750 /mnt/home/"$user"/.ssh/id_rsa.pub
+arch-chroot /mnt chown -R "$user":"$user" /home/"$user"
+
+grep -rl '/home/chris' /mnt/home/"$user" | xargs sed -i "s|/home/chris|/home/$user|"
+
+echo '==> Creating a symlink to the vbox shared folder'
+arch-chroot /mnt su - "$user" -c 'ln -s /media/sf_partages'
+
+echo '==> Configuring and enabling lxdm'
+sed -i /mnt/etc/lxdm/lxdm.conf \
+    -e "s|^# autologin=dgod|autologin=$user|" \
+    -e 's|^# session=/usr/bin/startlxde|session=/usr/bin/openbox-session|' \
+    -e 's|^# numlock=0|numlock=1|' \
+    -e '/^# reset=1/ s|^# ||'
+arch-chroot /mnt systemctl enable lxdm
+
+echo '==> Configuring and enabling Apache'
+sed -i /mnt/etc/httpd/conf/httpd.conf \
+    -e '/^LoadModule mpm_event_module modules\/mod_mpm_event.so/ s|^|#|' \
+    -e '/^#LoadModule mpm_prefork_module modules\/mod_mpm_prefork.so/ s|^#||' \
+    -e '/^#LoadModule rewrite_module modules\/mod_rewrite.so/ s|^#||' \
+    -e '/^LoadModule rewrite_module modules\/mod_rewrite.so/ a LoadModule php5_module modules/libphp5.so'
+echo 'Include conf/extra/php5_module.conf' >> /mnt/etc/httpd/conf/httpd.conf
+arch-chroot /mnt systemctl enable httpd
+
+echo '==> Configuring PHP'
+sed -i /mnt/etc/php/php.ini \
+    -e '/^open_basedir =/ s|$|:/usr/bin:/usr/local/bin:/dev/null|' \
+    -e '/^;date.timezone =/ {s|^;||; s|$| Asia/Tokyo|}' \
+    -e '/^;extension=iconv.so/ s|^;||' \
+    -e '/^;extension=intl.so/ s|^;||' \
+    -e '/^;extension=mysql.so/ s|^;||' \
+    -e '/^;extension=mysqli.so/ s|^;||' \
+    -e '/^;extension=openssl.so/ s|^;||' \
+    -e '/^;extension=pdo_mysql.so/ s|^;||' \
+    -e '/^;extension=phar.so/ s|^;||' \
+    -e '/^;extension=posix.so/ s|^;||'
+
+echo '==> Configuring XDebug'
+sed -i 's|^;||' /mnt/etc/php/conf.d/xdebug.ini
+cat <<'XDEBUGINI' >> /mnt/etc/php/conf.d/xdebug.ini
+xdebug.max_nesting_level=200
+xdebug.var_display_max_depth=-1
+XDEBUGINI
+
+echo '==> Configuring and enable MariaDB'
+arch-chroot /mnt mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+arch-chroot /mnt systemctl enable mysqld
+
+echo '==> Configuring phpMyAdmin'
+echo 'Include conf/extra/httpd-phpmyadmin.conf' >> /mnt/etc/httpd/conf/httpd.conf
+sed -i '/^open_basedir =/ s|$|:/etc/webapps/|' /mnt/etc/php/php.ini
+sed -i "/^\$cfg\['Servers']\[\$i]\['auth_type']/ s|cookie|config|" /mnt/etc/webapps/phpmyadmin/config.inc.php
+sed -i "/^\$cfg\['Servers']\[\$i]\['AllowNoPassword']/ s|false|true|" /mnt/etc/webapps/phpmyadmin/config.inc.php
+cat <<'HTTPDPHPMYADMINCONF' >> /mnt/etc/httpd/conf/extra/httpd-phpmyadmin.conf
+Alias /phpmyadmin "/usr/share/webapps/phpMyAdmin"
+<Directory "/usr/share/webapps/phpMyAdmin">
+    DirectoryIndex index.html index.php
+    AllowOverride All
+    Options FollowSymlinks
+    Require all granted
+</Directory>
+HTTPDPHPMYADMINCONF

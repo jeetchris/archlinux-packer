@@ -1,0 +1,41 @@
+#!/bin/bash -eux
+
+echo '==> Installing yaourt'
+cat <<'PACMANCONF' >> /mnt/etc/pacman.conf
+
+[archlinuxfr]
+SigLevel = Never
+Server = http://repo.archlinux.fr/$arch
+PACMANCONF
+arch-chroot /mnt pacman -Syy --noconfirm yaourt
+sed -i '/^\[archlinuxfr\]$/,+2s|^|#|' /mnt/etc/pacman.conf
+
+echo '==> Adding a temporary user for packages requiring compilation'
+arch-chroot /mnt useradd yaourtuser
+
+install -m 0440 /dev/null /mnt/etc/sudoers.d/yaourtuser
+cat <<SUDOERS > /mnt/etc/sudoers.d/yaourtuser
+yaourtuser ALL=(ALL) NOPASSWD: /usr/bin/pacman
+SUDOERS
+
+echo '==> Installing additional packages'
+arch-chroot /mnt su yaourtuser <<SCRIPT
+    set -eux
+    yaourt -Syua --noconfirm --needed \
+        xterm tmux tree rsync gvim unzip ctags git \
+        xorg-server xorg-xrdb \
+        lxsession lxdm librsvg gtk-engines \
+        openbox python2-xdg \
+        obconf lxappearance-obconf obmenu-generator obsetlayout \
+        pcmanfm file-roller mirage evince \
+        gnome-themes-standard \
+        gnome-icon-theme gnome-icon-theme-extras gnome-icon-theme-symbolic \
+        cantarell-fonts ttf-liberation ttf-ubuntu-font-family otf-ipafont \
+        firefox flashplugin\
+        apache php php-apache mariadb phpmyadmin \
+        php-composer php-intl xdebug
+SCRIPT
+
+echo '==> Removing the temporary user'
+rm -rf /mnt/etc/sudoers.d/yaourtuser
+arch-chroot /mnt userdel yaourtuser
