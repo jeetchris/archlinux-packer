@@ -31,7 +31,8 @@ arch-chroot /mnt su yaourtuser <<SCRIPT
         gnome-themes-standard \
         gnome-icon-theme gnome-icon-theme-extras gnome-icon-theme-symbolic \
         cantarell-fonts ttf-liberation ttf-ubuntu-font-family otf-ipafont \
-        firefox flashplugin\
+        fcitx-mozc fcitx-im xorg-xprop fcitx-configtool \
+        firefox flashplugin \
         apache php php-apache mariadb phpmyadmin \
         php-composer php-intl xdebug
 SCRIPT
