@@ -34,8 +34,11 @@ arch-chroot /mnt su yaourtuser <<SCRIPT
         fcitx-mozc fcitx-im xorg-xprop fcitx-configtool \
         firefox flashplugin \
         apache php php-apache mariadb phpmyadmin \
-        php-composer php-intl xdebug
+        php-composer php-intl php-sqlite xdebug phpunit
 SCRIPT
+
+arch-chroot /mnt curl -LsS http://symfony.com/installer -o /usr/local/bin/symfony
+arch-chroot /mnt chmod a+x /usr/local/bin/symfony
 
 echo '==> Removing the temporary user'
 rm -rf /mnt/etc/sudoers.d/yaourtuser

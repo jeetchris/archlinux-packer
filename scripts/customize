@@ -70,6 +70,7 @@ sed -i /mnt/etc/php/php.ini \
     -e '/^;extension=mysqli.so/ s|^;||' \
     -e '/^;extension=openssl.so/ s|^;||' \
     -e '/^;extension=pdo_mysql.so/ s|^;||' \
+    -e '/^;extension=pdo_sqlite.so/ s|^;||' \
     -e '/^;extension=phar.so/ s|^;||' \
     -e '/^;extension=posix.so/ s|^;||'
 
