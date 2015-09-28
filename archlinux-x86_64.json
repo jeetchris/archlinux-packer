@@ -47,6 +47,12 @@
                 "scripts/add_packages",
                 "scripts/customize",
                 "scripts/clean"
+            ],
+            "environment_vars": [
+                "VM_HOSTNAME=ordi",
+                "VM_USER=chris",
+                "VM_GIT_USER_NAME=Christophe Michard",
+                "VM_GIT_USER_EMAIL=michardchristophe@free.fr"
             ]
         }
     ]

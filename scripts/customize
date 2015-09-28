@@ -1,7 +1,9 @@
 #!/bin/bash -eux
 
-hostname=ordi
-user=chris
+hostname="$VM_HOSTNAME"
+user="$VM_USER"
+git_user_name="$VM_GIT_USER_NAME"
+git_user_email="$VM_GIT_USER_EMAIL"
 
 echo '==> Configuring the hostname'
 echo "$hostname" > /mnt/etc/hostname
@@ -42,6 +44,10 @@ grep -rl '/home/chris' /mnt/home/"$user" | xargs sed -i "s|/home/chris|/home/$us
 
 echo '==> Creating a symlink to the vbox shared folder'
 arch-chroot /mnt su - "$user" -c 'ln -s /media/sf_partages'
+
+echo "==> Configuring gitconfig"
+arch-chroot /mnt su - "$user" -c "git config --global user.name '$git_user_name'"
+arch-chroot /mnt su - "$user" -c "git config --global user.email '$git_user_email'"
 
 echo '==> Configuring and enabling lxdm'
 sed -i /mnt/etc/lxdm/lxdm.conf \
