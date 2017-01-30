@@ -21,7 +21,8 @@ MIRRORLIST
 echo '==> Bootstrapping the new system'
 pacstrap /mnt \
     base base-devel grub \
-    virtualbox-guest-utils alsa-utils openssh\
+    virtualbox-guest-modules-arch virtualbox-guest-utils \
+    alsa-utils openssh\
     bash-completion
 
 echo '==> Generating the filesystem table'

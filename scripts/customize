@@ -62,13 +62,26 @@ sed -i /mnt/etc/httpd/conf/httpd.conf \
     -e '/^LoadModule mpm_event_module modules\/mod_mpm_event.so/ s|^|#|' \
     -e '/^#LoadModule mpm_prefork_module modules\/mod_mpm_prefork.so/ s|^#||' \
     -e '/^#LoadModule rewrite_module modules\/mod_rewrite.so/ s|^#||' \
-    -e '/^LoadModule rewrite_module modules\/mod_rewrite.so/ a LoadModule php5_module modules/libphp5.so'
-echo 'Include conf/extra/php5_module.conf' >> /mnt/etc/httpd/conf/httpd.conf
+    -e '/^LoadModule rewrite_module modules\/mod_rewrite.so/ a #LoadModule php56_module modules/libphp56.so'
+    -e '/^LoadModule rewrite_module modules\/mod_rewrite.so/ a LoadModule php7_module modules/libphp7.so'
+echo '#Include conf/extra/php56_module.conf' >> /mnt/etc/httpd/conf/httpd.conf
+echo 'Include conf/extra/php7_module.conf' >> /mnt/etc/httpd/conf/httpd.conf
 arch-chroot /mnt systemctl enable httpd
 
+# php56 configuration:
+# - /usr/bin/: for php56 bin/console server:run
+#   Warning: is_file(): open_basedir restriction in effect. File(/usr/bin/php56) is not within the allowed path(s)
+# - /etc/webapps/: allow the phpMyAdmin configuration to be read
 echo '==> Configuring PHP'
 sed -i /mnt/etc/php/php.ini \
-    -e '/^open_basedir =/ s|$|:/usr/bin:/usr/local/bin:/dev/null|' \
+    -e '/^;date.timezone =/ {s|^;||; s|$| Asia/Tokyo|}' \
+    -e '/^;extension=iconv.so/ s|^;||' \
+    -e '/^;extension=intl.so/ s|^;||' \
+    -e '/^;extension=mysqli.so/ s|^;||' \
+    -e '/^;extension=pdo_mysql.so/ s|^;||' \
+    -e '/^;extension=pdo_sqlite.so/ s|^;||'
+sed -i /mnt/etc/php56/php.ini \
+    -e '/^open_basedir =/ s|$|:/usr/bin/:/etc/webapps/|' \
     -e '/^;date.timezone =/ {s|^;||; s|$| Asia/Tokyo|}' \
     -e '/^;extension=iconv.so/ s|^;||' \
     -e '/^;extension=intl.so/ s|^;||' \
@@ -82,6 +95,11 @@ sed -i /mnt/etc/php/php.ini \
 
 echo '==> Configuring XDebug'
 sed -i 's|^;||' /mnt/etc/php/conf.d/xdebug.ini
+cat <<'XDEBUGINI' >> /mnt/etc/php/conf.d/xdebug.ini
+xdebug.max_nesting_level=200
+xdebug.var_display_max_depth=-1
+XDEBUGINI
+sed -i 's|^;||' /mnt/etc/php56/conf.d/xdebug.ini
 cat <<'XDEBUGINI' >> /mnt/etc/php/conf.d/xdebug.ini
 xdebug.max_nesting_level=200
 xdebug.var_display_max_depth=-1

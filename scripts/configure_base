@@ -48,11 +48,6 @@ echo '==> Giving o+rx permissions to the /media folder for vbox shared folders a
 install -m 755 -d /mnt/media
 
 echo '==> Enabling virtualbox additions'
-cat <<VBOXCONF >> /mnt/etc/modules-load.d/virtualbox.conf
-vboxguest
-vboxsf
-vboxvideo
-VBOXCONF
 arch-chroot /mnt systemctl enable vboxservice
 
 echo '==> Enabling networking'

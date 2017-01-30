@@ -21,6 +21,8 @@ SUDOERS
 echo '==> Installing additional packages'
 arch-chroot /mnt su yaourtuser <<SCRIPT
     set -eux
+    # Need the key for php56, see https://aur.archlinux.org/pkgbase/php56/
+    gpg --keyserver hkp://hkps.pool.sks-keyservers.net --recv-keys C2BF0BC433CFC8B3 FE857D9A90D90EC1
     yaourt -Syua --noconfirm --needed \
         xterm tmux tree rsync gvim unzip ctags git \
         xorg-server xorg-xrdb \
@@ -34,7 +36,8 @@ arch-chroot /mnt su yaourtuser <<SCRIPT
         fcitx-mozc fcitx-im xorg-xprop fcitx-configtool \
         firefox flashplugin \
         apache php php-apache mariadb phpmyadmin \
-        php-composer php-intl php-sqlite xdebug phpunit
+        composer php-intl php-sqlite xdebug phpunit \
+        php56 php56-xdebug
 SCRIPT
 
 arch-chroot /mnt curl -LsS http://symfony.com/installer -o /usr/local/bin/symfony
